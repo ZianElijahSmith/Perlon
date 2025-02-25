@@ -23,7 +23,7 @@ die "Not running in a terminal\n" unless isatty(*STDIN);
 
 # Initialize terminal
 ReadMode('cbreak');  # Character-by-character input
-print BOLD, CYAN, "PerlPy - Interactive Perl Shell (Ctrl+C or 'exit' to quit)", RESET, "\n";
+print BOLD, CYAN, "Perlon - Interactive Perl Shell (Ctrl+C or 'exit' to quit)", RESET, "\n";
 
 my $prompt_num = 1;
 my $input = '';
@@ -145,9 +145,5 @@ ReadMode('restore');
 save_history();
 print BOLD, CYAN, "Goodbye!", RESET, "\n";
 
-
-ReadMode('restore');
-save_history();
-print BOLD, CYAN, "Goodbye!", RESET, "\n";
 
 
