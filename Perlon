@@ -1,0 +1,153 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use Term::ReadKey;
+use Term::ANSIColor qw(:constants);
+use POSIX qw(isatty);
+use feature 'say';  # Enable say globally
+
+# Define colors for syntax highlighting
+my %color_rules = (
+    '\b(sub)\b'     => BOLD . CYAN,
+    '\b(my)\b'      => BOLD . GREEN,
+    '\b(print)\b'   => BOLD . YELLOW,
+    '\b(use)\b'     => BOLD . MAGENTA,
+    '\$[a-zA-Z_]\w*\b' => BOLD . RED,    # Scalars
+    '\@[a-zA-Z_]\w*\b' => BOLD . BLUE,   # Arrays
+    '\%[a-zA-Z_]\w*\b' => BOLD . MAGENTA, # Hashes
+    '\b\d+\b'       => BOLD . YELLOW,    # Numbers
+);
+
+# Ensure we’re in a terminal
+die "Not running in a terminal\n" unless isatty(*STDIN);
+
+# Initialize terminal
+ReadMode('cbreak');  # Character-by-character input
+print BOLD, CYAN, "PerlPy - Interactive Perl Shell (Ctrl+C or 'exit' to quit)", RESET, "\n";
+
+my $prompt_num = 1;
+my $input = '';
+my $history_file = "$ENV{HOME}/.perlpy_history";
+my @history = (-f $history_file) ? do { open my $fh, '<', $history_file or die $!; <$fh> } : ();
+
+sub apply_syntax_highlighting {
+    my ($line) = @_;
+    my $colored = $line;
+    foreach my $pattern (keys %color_rules) {
+        my $color = $color_rules{$pattern};
+        $colored =~ s/($pattern)/$color . $1 . RESET/eg;
+    }
+    return $colored;
+}
+
+sub redraw_line {
+    my ($prompt, $text) = @_;
+    print "\r\e[K";  # Move cursor to start and clear to end of line
+    my $highlighted = apply_syntax_highlighting($text);
+    print "$prompt$highlighted";
+}
+
+# Main REPL loop
+while (1) {
+    my $prompt = BOLD . CYAN . "In [$prompt_num]: " . RESET;
+    print $prompt;
+    $input = '';
+
+    while (1) {
+        my $char = ReadKey(0);
+        if (!defined $char) {  # EOF or Ctrl+D
+            print "\n";
+            last;
+        }
+
+        if (ord($char) == 3) {  # Ctrl+C
+            print "\n", BOLD, CYAN, "Goodbye!", RESET, "\n";
+            ReadMode('restore');
+            save_history();
+            exit;
+        }
+
+        if ($char eq "\n") {  # Enter key
+            print "\n";
+            last;
+        }
+
+        elsif (ord($char) == 127) {  # Backspace
+            $input = substr($input, 0, -1) if length($input) > 0;
+            redraw_line($prompt, $input);
+        }
+
+        else {
+            $input .= $char;
+            redraw_line($prompt, $input);
+        }
+    }
+
+    # Exit condition
+    if (!defined $input || $input =~ /^\s*exit\s*$/) {
+        print BOLD, CYAN, "Goodbye!", RESET, "\n";
+        last;
+    }
+
+    # Skip empty lines
+    next if $input =~ /^\s*$/;
+
+    # Handle multi-line input (e.g., subroutines)
+    if ($input =~ /^\s*sub\s+\w+\s*{/) {
+        my $sub_code = $input;
+        while ($sub_code !~ /}/) {
+            print BOLD . CYAN . "... " . RESET;
+            my $extra = '';
+            while (1) {
+                my $c = ReadKey(0);
+                last unless defined $c;
+                last if $c eq "\n";
+                $extra .= $c;
+                redraw_line(BOLD . CYAN . "... " . RESET, $extra);
+            }
+            print "\n";
+            $sub_code .= "\n" . $extra;
+        }
+        eval {
+            local $SIG{__WARN__} = sub { print YELLOW, "Warn: @_", RESET, "\n" };
+            eval "package main; $sub_code";
+            print RED, "Error: $@", RESET, "\n" if $@;
+            1;
+        } or print RED, "Eval Error: $@", RESET, "\n";
+        $prompt_num++;
+        push @history, $sub_code;
+        next;
+    }
+
+    # Execute single-line command
+    eval {
+        local $SIG{__WARN__} = sub { print YELLOW, "Warn: @_", RESET, "\n" };
+        my $result = eval $input;
+        if ($@) {
+            print RED, "Error: $@", RESET, "\n";
+        } elsif (defined $result && $input !~ /^\s*\w+\s*\(.*\)\s*$/) {
+            print BOLD, GREEN, "Out [$prompt_num]: ", RESET, "$result\n";
+        }
+        1;
+    } or print RED, "Eval Error: $@", RESET, "\n";
+
+    $prompt_num++;
+    push @history, $input;
+}
+
+sub save_history {
+    open my $fh, '>', $history_file or warn "Couldn’t save history: $!\n";
+    print $fh join("\n", @history);
+    close $fh;
+}
+
+ReadMode('restore');
+save_history();
+print BOLD, CYAN, "Goodbye!", RESET, "\n";
+
+
+ReadMode('restore');
+save_history();
+print BOLD, CYAN, "Goodbye!", RESET, "\n";
+
+
