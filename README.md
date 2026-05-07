@@ -1,9 +1,10 @@
 # Perlon
-An attempt to make a Perl Interpreter similar to Ipython, for Perl, and in Perl.
+An attempt to make a Perl Interpreter similar to Ipython, in Perl, for Perl.
 <br>
 Some of this code made with AI, some of it is not.
 <br><br>
-<img width="563" height="147" alt="image" src="https://github.com/user-attachments/assets/c964f80d-31ba-49cc-ae08-318d860564f0" />
+<img width="559" height="294" alt="image" src="https://github.com/user-attachments/assets/3e331c41-9aa0-45a7-af00-f4639f01843b" />
+
 
 # Current Features
 0. Beloved color coded syntax for easier readability.
